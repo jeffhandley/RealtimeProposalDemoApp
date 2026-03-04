@@ -16,11 +16,11 @@
 
     <PackageReference Include="NAudio" Version="2.1.0" />
 
-    <ProjectReference Include="..\tarekgh-extensions\src\Libraries\Microsoft.Extensions.AI.Abstractions\Microsoft.Extensions.AI.Abstractions.csproj" />
-	<ProjectReference Include="..\tarekgh-extensions\src\Libraries\Microsoft.Extensions.AI\Microsoft.Extensions.AI.csproj" />
-	<ProjectReference Include="..\tarekgh-extensions\src\Libraries\Microsoft.Extensions.AI.OpenAI\Microsoft.Extensions.AI.OpenAI.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="$(PrivateExtensionAIPackageVersion)" />
+	<PackageReference Include="Microsoft.Extensions.AI" Version="$(PrivateExtensionAIPackageVersion)" />
+	<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="$(PrivateExtensionAIPackageVersion)" />
 
-    <ProjectReference Include="..\googleapis-dotnet-genai\Google.GenAI\Google.GenAI.csproj" />
+    <PackageReference Include="Google.GenAI" Version="1.2.0-dev" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Resources\microphone.png">
