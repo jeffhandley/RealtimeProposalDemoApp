@@ -129,7 +129,7 @@ namespace RealtimePlayGround
             "cedar"});
             this.cmbVoice.Location = new System.Drawing.Point(12, 152);
             this.cmbVoice.Name = "cmbVoice";
-            this.cmbVoice.Size = new System.Drawing.Size(62, 25);
+            this.cmbVoice.Size = new System.Drawing.Size(130, 25);
             this.cmbVoice.TabIndex = 10;
             this.cmbVoice.SelectedIndex = 0;
             //
@@ -150,7 +150,7 @@ namespace RealtimePlayGround
             this.trackSpeed.Maximum = 2;
             this.trackSpeed.Minimum = 0;
             this.trackSpeed.Name = "trackSpeed";
-            this.trackSpeed.Size = new System.Drawing.Size(62, 45);
+            this.trackSpeed.Size = new System.Drawing.Size(130, 45);
             this.trackSpeed.TabIndex = 12;
             this.trackSpeed.Value = 1;
             this.trackSpeed.ValueChanged += new System.EventHandler(this.trackSpeed_ValueChanged);
@@ -175,7 +175,7 @@ namespace RealtimePlayGround
             this.cmbLogLevel.FormattingEnabled = true;
             this.cmbLogLevel.Location = new System.Drawing.Point(12, 282);
             this.cmbLogLevel.Name = "cmbLogLevel";
-            this.cmbLogLevel.Size = new System.Drawing.Size(62, 25);
+            this.cmbLogLevel.Size = new System.Drawing.Size(130, 25);
             this.cmbLogLevel.TabIndex = 14;
             this.cmbLogLevel.Items.AddRange(new object[] 
             {
@@ -211,8 +211,7 @@ namespace RealtimePlayGround
             "Amazon Bedrock"});
             this.cmbProvider.Location = new System.Drawing.Point(12, 342);
             this.cmbProvider.Name = "cmbProvider";
-            this.cmbProvider.Size = new System.Drawing.Size(62, 25);
-            this.cmbProvider.DropDownWidth = 130;
+            this.cmbProvider.Size = new System.Drawing.Size(130, 25);
             this.cmbProvider.TabIndex = 16;
             this.cmbProvider.SelectedIndex = 0;
             this.cmbProvider.SelectedIndexChanged += new System.EventHandler(this.cmbProvider_SelectedIndexChanged);
@@ -234,9 +233,9 @@ namespace RealtimePlayGround
             this.richTextBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.richTextBox2.Enabled = false;
-            this.richTextBox2.Location = new System.Drawing.Point(80, 268);
+            this.richTextBox2.Location = new System.Drawing.Point(148, 268);
             this.richTextBox2.Name = "richTextBox2";
-            this.richTextBox2.Size = new System.Drawing.Size(428, 80);
+            this.richTextBox2.Size = new System.Drawing.Size(360, 80);
             this.richTextBox2.TabIndex = 4;
             this.richTextBox2.Text = "";
             this.richTextBox2.KeyDown += new System.Windows.Forms.KeyEventHandler(this.richTextBox2_KeyDown);
@@ -258,7 +257,7 @@ namespace RealtimePlayGround
             this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
             | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(80, 12);
+            this.splitContainer1.Location = new System.Drawing.Point(148, 12);
             this.splitContainer1.Name = "splitContainer1";
             //
             // splitContainer1.Panel1
@@ -268,7 +267,7 @@ namespace RealtimePlayGround
             // splitContainer1.Panel2
             //
             this.splitContainer1.Panel2.Controls.Add(this.splitContainer2);
-            this.splitContainer1.Size = new System.Drawing.Size(508, 250);
+            this.splitContainer1.Size = new System.Drawing.Size(440, 250);
             this.splitContainer1.SplitterDistance = 254;
             this.splitContainer1.TabIndex = 7;
             //
