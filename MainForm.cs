@@ -1066,7 +1066,7 @@ namespace RealtimePlayGround
 
                 if (_realtimeSession != null)
                 {
-                    _realtimeSession.Dispose();
+                    await _realtimeSession.DisposeAsync();
                     _realtimeSession = null;
                 }
 
