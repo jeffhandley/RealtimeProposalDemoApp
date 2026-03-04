@@ -854,23 +854,29 @@ namespace RealtimePlayGround
                     "GetWeather",
                     "Gets the current weather for a given location");
 
-                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? "alloy";
+                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? (isGemini ? "Puck" : "alloy");
                 double speedValue = GetSpeedValue();
 
-                // For Google Gemini, session options are applied at creation time
-                var sessionOptions = new RealtimeSessionOptions
-                {
-                    OutputModalities = ["audio"],
-                    Instructions = "You are a funny chat bot.",
-                    Voice = selectedVoice,
-                    VoiceSpeed = speedValue,
-                    TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
-                    VoiceActivityDetection = new VoiceActivityDetection
+                // Build session options (some fields are provider-specific)
+                var sessionOptions = isGemini
+                    ? new RealtimeSessionOptions
                     {
-                        CreateResponse = true,
-                    },
-                    Tools = [getWeatherFunction]
-                };
+                        OutputModalities = ["audio"],
+                        Instructions = "You are a funny chat bot.",
+                        Voice = selectedVoice,
+                        TranscriptionOptions = new TranscriptionOptions(),
+                        Tools = [getWeatherFunction]
+                    }
+                    : new RealtimeSessionOptions
+                    {
+                        OutputModalities = ["audio"],
+                        Instructions = "You are a funny chat bot.",
+                        Voice = selectedVoice,
+                        VoiceSpeed = speedValue,
+                        TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
+                        VoiceActivityDetection = new VoiceActivityDetection { CreateResponse = true },
+                        Tools = [getWeatherFunction]
+                    };
 
                 var session = isGemini
                     ? await _realtimeClient.CreateSessionAsync(sessionOptions)
