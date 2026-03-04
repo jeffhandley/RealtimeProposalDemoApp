@@ -948,7 +948,6 @@ namespace RealtimePlayGround
                         await foreach (var serverMessage in _realtimeSession.GetStreamingResponseAsync(
                             _streamingCancellationTokenSource.Token))
                         {
-                            Invoke(() => WriteErrorToRichTextBox($"Last Message: {serverMessage.Type}"));
                             ProcessServerMessage(serverMessage);
                         }
                     }
