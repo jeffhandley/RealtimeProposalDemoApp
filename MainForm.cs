@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
 using Google.GenAI;
+using Amazon;
+using Amazon.BedrockRuntime;
 using Sdk = OpenAI.Realtime;
 using System;
 using System.Collections.Generic;
@@ -814,8 +816,29 @@ namespace RealtimePlayGround
             {
                 var config = new ConfigurationBuilder().AddUserSecrets<MainForm>().Build();
                 bool isGemini = cmbProvider.SelectedIndex == 1;
+                bool isBedrock = cmbProvider.SelectedIndex == 2;
 
-                if (isGemini)
+                if (isBedrock)
+                {
+                    string? accessKey = config["AWS:AccessKeyId"];
+                    string? secretKey = config["AWS:SecretAccessKey"];
+                    string? region = config["AWS:Region"] ?? "us-east-1";
+
+                    if (string.IsNullOrEmpty(accessKey) || string.IsNullOrEmpty(secretKey))
+                    {
+                        WriteErrorToRichTextBox(
+                            "AWS credentials are not set. Use:\n" +
+                            "  dotnet user-secrets set \"AWS:AccessKeyId\" \"<key>\"\n" +
+                            "  dotnet user-secrets set \"AWS:SecretAccessKey\" \"<secret>\"\n" +
+                            "  dotnet user-secrets set \"AWS:Region\" \"us-east-1\"  (optional, defaults to us-east-1)");
+                        return;
+                    }
+
+                    var bedrockClient = new AmazonBedrockRuntimeClient(
+                        accessKey, secretKey, RegionEndpoint.GetBySystemName(region));
+                    _realtimeClient = bedrockClient.AsIRealtimeClient("amazon.nova-sonic-v1:0");
+                }
+                else if (isGemini)
                 {
                     string? geminiKey = config["GeminiApiKey"];
                     if (string.IsNullOrEmpty(geminiKey))
@@ -839,7 +862,7 @@ namespace RealtimePlayGround
                     _realtimeClient = new OpenAIRealtimeClient(openAiKey, "gpt-realtime");
                 }
 
-                string providerName = isGemini ? "Google Gemini" : "OpenAI";
+                string providerName = isBedrock ? "Amazon Bedrock" : isGemini ? "Google Gemini" : "OpenAI";
                 statusLabel.Text = $"Connecting to {providerName}...";
 
                 AIFunction getWeatherFunction = AIFunctionFactory.Create(
@@ -854,20 +877,35 @@ namespace RealtimePlayGround
                     "GetWeather",
                     "Gets the current weather for a given location");
 
-                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? (isGemini ? "Puck" : "alloy");
+                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? (isGemini ? "Puck" : isBedrock ? "matthew" : "alloy");
                 double speedValue = GetSpeedValue();
 
                 // Build session options (some fields are provider-specific)
-                var sessionOptions = isGemini
-                    ? new RealtimeSessionOptions
+                RealtimeSessionOptions sessionOptions;
+                if (isBedrock)
+                {
+                    sessionOptions = new RealtimeSessionOptions
+                    {
+                        OutputModalities = ["audio"],
+                        Instructions = "You are a funny chat bot.",
+                        Voice = selectedVoice,
+                        Tools = [getWeatherFunction]
+                    };
+                }
+                else if (isGemini)
+                {
+                    sessionOptions = new RealtimeSessionOptions
                     {
                         OutputModalities = ["audio"],
                         Instructions = "You are a funny chat bot.",
                         Voice = selectedVoice,
                         TranscriptionOptions = new TranscriptionOptions(),
                         Tools = [getWeatherFunction]
-                    }
-                    : new RealtimeSessionOptions
+                    };
+                }
+                else
+                {
+                    sessionOptions = new RealtimeSessionOptions
                     {
                         OutputModalities = ["audio"],
                         Instructions = "You are a funny chat bot.",
@@ -877,8 +915,9 @@ namespace RealtimePlayGround
                         VoiceActivityDetection = new VoiceActivityDetection { CreateResponse = true },
                         Tools = [getWeatherFunction]
                     };
+                }
 
-                var session = isGemini
+                var session = (isGemini || isBedrock)
                     ? await _realtimeClient.CreateSessionAsync(sessionOptions)
                     : await _realtimeClient.CreateSessionAsync();
 
@@ -912,7 +951,7 @@ namespace RealtimePlayGround
                 btnRecord.Enabled = true;
                 btnSend.Enabled = true;
                 richTextBox2.Enabled = true;
-                trackSpeed.Enabled = isGemini ? false : true;
+                trackSpeed.Enabled = (!isGemini && !isBedrock);
                 cmbLogLevel.Enabled = false;
                 cmbVoice.Enabled = false;
                 cmbProvider.Enabled = false;
@@ -921,7 +960,7 @@ namespace RealtimePlayGround
                 await StartStreamingAsync();
 
                 // For OpenAI, send session update after connection
-                if (!isGemini)
+                if (!isGemini && !isBedrock)
                 {
                     await _realtimeSession.UpdateAsync(sessionOptions);
                 }
@@ -1173,12 +1212,17 @@ namespace RealtimePlayGround
         private void cmbProvider_SelectedIndexChanged(object? sender, EventArgs e)
         {
             bool isGemini = cmbProvider.SelectedIndex == 1;
+            bool isBedrock = cmbProvider.SelectedIndex == 2;
 
             // Update voice options based on provider
             cmbVoice.Items.Clear();
             if (isGemini)
             {
                 cmbVoice.Items.AddRange(new object[] { "Puck", "Charon", "Kore", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr" });
+            }
+            else if (isBedrock)
+            {
+                cmbVoice.Items.AddRange(new object[] { "matthew", "ruth", "tiffany", "amy" });
             }
             else
             {
@@ -1187,7 +1231,7 @@ namespace RealtimePlayGround
             cmbVoice.SelectedIndex = 0;
 
             // Speed control is OpenAI-specific
-            trackSpeed.Enabled = !isGemini;
+            trackSpeed.Enabled = !isGemini && !isBedrock;
         }
 
         private double GetSpeedValue()
