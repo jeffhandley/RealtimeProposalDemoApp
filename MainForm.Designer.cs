@@ -211,7 +211,8 @@ namespace RealtimePlayGround
             "Amazon Bedrock"});
             this.cmbProvider.Location = new System.Drawing.Point(12, 342);
             this.cmbProvider.Name = "cmbProvider";
-            this.cmbProvider.Size = new System.Drawing.Size(130, 25);
+            this.cmbProvider.Size = new System.Drawing.Size(62, 25);
+            this.cmbProvider.DropDownWidth = 130;
             this.cmbProvider.TabIndex = 16;
             this.cmbProvider.SelectedIndex = 0;
             this.cmbProvider.SelectedIndexChanged += new System.EventHandler(this.cmbProvider_SelectedIndexChanged);
