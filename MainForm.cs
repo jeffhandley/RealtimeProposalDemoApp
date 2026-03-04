@@ -882,13 +882,6 @@ namespace RealtimePlayGround
                     ? await _realtimeClient.CreateSessionAsync(sessionOptions)
                     : await _realtimeClient.CreateSessionAsync();
 
-                if (session == null)
-                {
-                    WriteErrorToRichTextBox($"Failed to connect to {providerName}.");
-                    statusLabel.Text = "Connection failed.";
-                    return;
-                }
-
                 var services = new ServiceCollection()
                     .AddLogging(builder =>
                     {
@@ -897,7 +890,7 @@ namespace RealtimePlayGround
                     })
                     .BuildServiceProvider();
 
-                var builder = new RealtimeSessionBuilder(session!)
+                var builder = new RealtimeSessionBuilder(session)
                     .UseFunctionInvocation(configure: functionSession =>
                     {
                         functionSession.AdditionalTools = [getWeatherFunction];
