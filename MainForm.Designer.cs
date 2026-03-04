@@ -19,6 +19,8 @@ namespace RealtimePlayGround
         private System.Windows.Forms.TrackBar trackSpeed;
         private System.Windows.Forms.Label lblLogLevel;
         private System.Windows.Forms.ComboBox cmbLogLevel;
+        private System.Windows.Forms.Label lblProvider;
+        private System.Windows.Forms.ComboBox cmbProvider;
         private System.Windows.Forms.SplitContainer splitContainer2;
 
         protected override void Dispose(bool disposing)
@@ -49,6 +51,8 @@ namespace RealtimePlayGround
             this.trackSpeed = new System.Windows.Forms.TrackBar();
             this.lblLogLevel = new System.Windows.Forms.Label();
             this.cmbLogLevel = new System.Windows.Forms.ComboBox();
+            this.lblProvider = new System.Windows.Forms.Label();
+            this.cmbProvider = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackSpeed)).BeginInit();
@@ -186,12 +190,38 @@ namespace RealtimePlayGround
             this.cmbLogLevel.SelectedIndex = 6;
 
             //
+            // lblProvider
+            //
+            this.lblProvider.AutoSize = true;
+            this.lblProvider.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.lblProvider.Location = new System.Drawing.Point(12, 320);
+            this.lblProvider.Name = "lblProvider";
+            this.lblProvider.Size = new System.Drawing.Size(62, 19);
+            this.lblProvider.TabIndex = 15;
+            this.lblProvider.Text = "Provider";
+            //
+            // cmbProvider
+            //
+            this.cmbProvider.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbProvider.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.cmbProvider.FormattingEnabled = true;
+            this.cmbProvider.Items.AddRange(new object[] {
+            "OpenAI",
+            "Google Gemini"});
+            this.cmbProvider.Location = new System.Drawing.Point(12, 342);
+            this.cmbProvider.Name = "cmbProvider";
+            this.cmbProvider.Size = new System.Drawing.Size(62, 25);
+            this.cmbProvider.TabIndex = 16;
+            this.cmbProvider.SelectedIndex = 0;
+            this.cmbProvider.SelectedIndexChanged += new System.EventHandler(this.cmbProvider_SelectedIndexChanged);
+
+            //
             // statusLabel
             //
             this.statusLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.statusLabel.AutoSize = true;
             this.statusLabel.Font = new System.Drawing.Font("Segoe UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.statusLabel.Location = new System.Drawing.Point(12, 358);
+            this.statusLabel.Location = new System.Drawing.Point(12, 380);
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(200, 19);
             this.statusLabel.TabIndex = 2;
@@ -291,7 +321,9 @@ namespace RealtimePlayGround
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(600, 385);
+            this.ClientSize = new System.Drawing.Size(600, 410);
+            this.Controls.Add(this.cmbProvider);
+            this.Controls.Add(this.lblProvider);
             this.Controls.Add(this.cmbLogLevel);
             this.Controls.Add(this.lblLogLevel);
             this.Controls.Add(this.trackSpeed);

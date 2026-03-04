@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NAudio.Wave;
+using Google.GenAI;
 using Sdk = OpenAI.Realtime;
 using System;
 using System.Collections.Generic;
@@ -812,24 +813,34 @@ namespace RealtimePlayGround
             try
             {
                 var config = new ConfigurationBuilder().AddUserSecrets<MainForm>().Build();
-                string? apiKey = config["OpenAIKey"];
+                bool isGemini = cmbProvider.SelectedIndex == 1;
 
-                if (string.IsNullOrEmpty(apiKey))
+                if (isGemini)
                 {
-                    WriteErrorToRichTextBox("API key is not set.");
-                    return;
+                    string? geminiKey = config["GeminiApiKey"];
+                    if (string.IsNullOrEmpty(geminiKey))
+                    {
+                        WriteErrorToRichTextBox("Gemini API key is not set. Use: dotnet user-secrets set \"GeminiApiKey\" \"<key>\"");
+                        return;
+                    }
+
+                    var geminiClient = new Client(apiKey: geminiKey);
+                    _realtimeClient = geminiClient.AsIRealtimeClient("gemini-2.5-flash-native-audio-preview-12-2025");
+                }
+                else
+                {
+                    string? openAiKey = config["OpenAIKey"];
+                    if (string.IsNullOrEmpty(openAiKey))
+                    {
+                        WriteErrorToRichTextBox("OpenAI API key is not set. Use: dotnet user-secrets set \"OpenAIKey\" \"<key>\"");
+                        return;
+                    }
+
+                    _realtimeClient = new OpenAIRealtimeClient(openAiKey, "gpt-realtime");
                 }
 
-                _realtimeClient = new OpenAIRealtimeClient(apiKey, "gpt-realtime");
-
-                statusLabel.Text = "Connecting to OpenAI...";
-                var session = await _realtimeClient.CreateSessionAsync();
-                if (session == null)
-                {
-                    WriteErrorToRichTextBox("Failed to connect to OpenAI.");
-                    statusLabel.Text = "Connection failed.";
-                    return;
-                }
+                string providerName = isGemini ? "Google Gemini" : "OpenAI";
+                statusLabel.Text = $"Connecting to {providerName}...";
 
                 AIFunction getWeatherFunction = AIFunctionFactory.Create(
                     (string location) =>
@@ -842,6 +853,35 @@ namespace RealtimePlayGround
                         },
                     "GetWeather",
                     "Gets the current weather for a given location");
+
+                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? "alloy";
+                double speedValue = GetSpeedValue();
+
+                // For Google Gemini, session options are applied at creation time
+                var sessionOptions = new RealtimeSessionOptions
+                {
+                    OutputModalities = ["audio"],
+                    Instructions = "You are a funny chat bot.",
+                    Voice = selectedVoice,
+                    VoiceSpeed = speedValue,
+                    TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
+                    VoiceActivityDetection = new VoiceActivityDetection
+                    {
+                        CreateResponse = true,
+                    },
+                    Tools = [getWeatherFunction]
+                };
+
+                var session = isGemini
+                    ? await _realtimeClient.CreateSessionAsync(sessionOptions)
+                    : await _realtimeClient.CreateSessionAsync();
+
+                if (session == null)
+                {
+                    WriteErrorToRichTextBox($"Failed to connect to {providerName}.");
+                    statusLabel.Text = "Connection failed.";
+                    return;
+                }
 
                 var services = new ServiceCollection()
                     .AddLogging(builder =>
@@ -873,29 +913,19 @@ namespace RealtimePlayGround
                 btnRecord.Enabled = true;
                 btnSend.Enabled = true;
                 richTextBox2.Enabled = true;
-                trackSpeed.Enabled = true;
+                trackSpeed.Enabled = isGemini ? false : true;
                 cmbLogLevel.Enabled = false;
                 cmbVoice.Enabled = false;
-                statusLabel.Text = "Connected to OpenAI Realtime.";
-
-                string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? "alloy";
-                double speedValue = GetSpeedValue();
+                cmbProvider.Enabled = false;
+                statusLabel.Text = $"Connected to {providerName} Realtime.";
 
                 await StartStreamingAsync();
 
-                await _realtimeSession.UpdateAsync(new RealtimeSessionOptions
+                // For OpenAI, send session update after connection
+                if (!isGemini)
                 {
-                    OutputModalities = ["audio"],
-                    Instructions = "You are a funny chat bot.",
-                    Voice = selectedVoice,
-                    VoiceSpeed = speedValue,
-                    TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
-                    VoiceActivityDetection = new VoiceActivityDetection
-                    {
-                        CreateResponse = true,
-                    },
-                    Tools = [getWeatherFunction]
-                });
+                    await _realtimeSession.UpdateAsync(sessionOptions);
+                }
             }
             catch (Exception ex)
             {
@@ -1053,6 +1083,7 @@ namespace RealtimePlayGround
                 statusLabel.Text = "Call ended.";
                 cmbLogLevel.Enabled = true;
                 cmbVoice.Enabled = true;
+                cmbProvider.Enabled = true;
             }
             catch (Exception ex)
             {
@@ -1139,6 +1170,26 @@ namespace RealtimePlayGround
             if (_startCallIcon != null)
                 btnCall.Image = _startCallIcon;
             statusLabel.Text = "Ready to record.";
+        }
+
+        private void cmbProvider_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            bool isGemini = cmbProvider.SelectedIndex == 1;
+
+            // Update voice options based on provider
+            cmbVoice.Items.Clear();
+            if (isGemini)
+            {
+                cmbVoice.Items.AddRange(new object[] { "Puck", "Charon", "Kore", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr" });
+            }
+            else
+            {
+                cmbVoice.Items.AddRange(new object[] { "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar" });
+            }
+            cmbVoice.SelectedIndex = 0;
+
+            // Speed control is OpenAI-specific
+            trackSpeed.Enabled = !isGemini;
         }
 
         private double GetSpeedValue()
