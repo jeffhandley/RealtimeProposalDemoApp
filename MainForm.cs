@@ -647,12 +647,12 @@ namespace RealtimePlayGround
                 if (_realtimeSession != null)
                 {
                     var ct = _streamingCancellationTokenSource?.Token ?? default;
-                    await _realtimeSession.SendAsync(new RealtimeClientInputAudioBufferAppendMessage(
+                    await _realtimeSession.SendAsync(new InputAudioBufferAppendRealtimeClientMessage(
                         audioContent: new DataContent($"data:audio/pcm;base64,{Convert.ToBase64String(resampledAudio)}")
                     ), ct);
 
-                    await _realtimeSession.SendAsync(new RealtimeClientInputAudioBufferCommitMessage(), ct);
-                    await _realtimeSession.SendAsync(new RealtimeClientCreateResponseMessage(), ct);
+                    await _realtimeSession.SendAsync(new InputAudioBufferCommitRealtimeClientMessage(), ct);
+                    await _realtimeSession.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
 
                     statusLabel.Text = $"Sent {audioDurationMs:F0}ms of audio.";
                 }
@@ -910,16 +910,10 @@ namespace RealtimePlayGround
                         OutputModalities = ["audio"],
                         Instructions = "You are a funny chat bot.",
                         Voice = selectedVoice,
-                        VoiceSpeed = speedValue,
                         TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
-                        VoiceActivityDetection = new VoiceActivityDetection { CreateResponse = true },
                         Tools = [getWeatherFunction]
                     };
                 }
-
-                var session = (isGemini || isBedrock)
-                    ? await _realtimeClient.CreateSessionAsync(sessionOptions)
-                    : await _realtimeClient.CreateSessionAsync();
 
                 var services = new ServiceCollection()
                     .AddLogging(builder =>
@@ -929,13 +923,13 @@ namespace RealtimePlayGround
                     })
                     .BuildServiceProvider();
 
-                var builder = new RealtimeSessionBuilder(session)
-                    .UseFunctionInvocation(configure: functionSession =>
+                var clientBuilder = new RealtimeClientBuilder(_realtimeClient)
+                    .UseFunctionInvocation(configure: functionClient =>
                     {
-                        functionSession.AdditionalTools = [getWeatherFunction];
-                        functionSession.MaximumIterationsPerRequest = 10;
-                        functionSession.AllowConcurrentInvocation = true;
-                        functionSession.IncludeDetailedErrors = false;
+                        functionClient.AdditionalTools = [getWeatherFunction];
+                        functionClient.MaximumIterationsPerRequest = 10;
+                        functionClient.AllowConcurrentInvocation = true;
+                        functionClient.IncludeDetailedErrors = false;
                     })
                     .UseOpenTelemetry(configure: otel =>
                     {
@@ -943,7 +937,11 @@ namespace RealtimePlayGround
                     })
                     .UseLogging();
 
-                _realtimeSession = builder.Build(services);
+                var wrappedClient = clientBuilder.Build(services);
+
+                _realtimeSession = (isGemini || isBedrock)
+                    ? await wrappedClient.CreateSessionAsync(sessionOptions)
+                    : await wrappedClient.CreateSessionAsync();
 
                 _isCallActive = true;
                 if (_hangUpIcon != null)
@@ -962,7 +960,7 @@ namespace RealtimePlayGround
                 // For OpenAI, send session update after connection
                 if (!isGemini && !isBedrock)
                 {
-                    await _realtimeSession.UpdateAsync(sessionOptions);
+                    await _realtimeSession.SendAsync(new SessionUpdateRealtimeClientMessage(sessionOptions));
                 }
             }
             catch (Exception ex)
@@ -1018,7 +1016,7 @@ namespace RealtimePlayGround
 
                     switch (serverMessage)
                     {
-                        case RealtimeServerOutputTextAudioMessage audioMessage:
+                        case OutputTextAudioRealtimeServerMessage audioMessage:
                             if (audioMessage.Type == RealtimeServerMessageType.OutputAudioDelta && audioMessage.Audio != null)
                             {
                                 PlayAudioChunk(audioMessage.Audio);
@@ -1033,7 +1031,7 @@ namespace RealtimePlayGround
                             }
                             break;
 
-                        case RealtimeServerInputAudioTranscriptionMessage transcriptionMessage:
+                        case InputAudioTranscriptionRealtimeServerMessage transcriptionMessage:
                             if (transcriptionMessage.Type == RealtimeServerMessageType.InputAudioTranscriptionCompleted &&
                                 transcriptionMessage.Transcription != null)
                             {
@@ -1041,19 +1039,19 @@ namespace RealtimePlayGround
                             }
                             break;
 
-                        case RealtimeServerErrorMessage errorMessage:
+                        case ErrorRealtimeServerMessage errorMessage:
                             WriteErrorToRichTextBox($"Error: {errorMessage.Error?.Message}");
                             break;
 
-                        case RealtimeServerResponseCreatedMessage responseMessage:
+                        case ResponseCreatedRealtimeServerMessage responseMessage:
                             if (responseMessage.Usage != null)
                             {
                                 richTextBoxEvents?.AppendText($"Usage - Input: {responseMessage.Usage.InputTokenCount}, Output: {responseMessage.Usage.OutputTokenCount}\n");
                             }
                             break;
 
-                        case RealtimeServerResponseOutputItemMessage responseMessage:
-                            if (responseMessage.Item is RealtimeContentItem contentItem)
+                        case ResponseOutputItemRealtimeServerMessage responseMessage:
+                            if (responseMessage.Item is RealtimeConversationItem contentItem)
                             {
                                 foreach (var content in contentItem.Contents)
                                 {
@@ -1255,18 +1253,13 @@ namespace RealtimePlayGround
                     double speedValue = GetSpeedValue();
                     string selectedVoice = cmbVoice.SelectedItem?.ToString() ?? "alloy";
 
-                    await _realtimeSession.UpdateAsync(new RealtimeSessionOptions
+                    await _realtimeSession.SendAsync(new SessionUpdateRealtimeClientMessage(new RealtimeSessionOptions
                     {
                         OutputModalities = ["audio"],
                         Instructions = "You are a funny chat bot.",
                         Voice = selectedVoice,
-                        VoiceSpeed = speedValue,
                         TranscriptionOptions = new TranscriptionOptions { ModelId = "whisper-1", SpeechLanguage = "en" },
-                        VoiceActivityDetection = new VoiceActivityDetection
-                        {
-                            CreateResponse = true,
-                        },
-                    });
+                    }));
 
                     statusLabel.Text = $"Speed updated to {speedValue}x";
                 }
@@ -1304,14 +1297,14 @@ namespace RealtimePlayGround
 
                     if (_realtimeSession != null)
                     {
-                        var contentItem = new RealtimeContentItem(
+                        var contentItem = new RealtimeConversationItem(
                             [new TextContent(text)],
                             id: null,
                             role: ChatRole.User
                         );
                         var ct = _streamingCancellationTokenSource?.Token ?? default;
-                        await _realtimeSession.SendAsync(new RealtimeClientCreateConversationItemMessage(item: contentItem), ct);
-                        await _realtimeSession.SendAsync(new RealtimeClientCreateResponseMessage(), ct);
+                        await _realtimeSession.SendAsync(new CreateConversationItemRealtimeClientMessage(item: contentItem), ct);
+                        await _realtimeSession.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
                         statusLabel.Text = "Text sent. Waiting for response...";
                     }
                 }
@@ -1380,14 +1373,14 @@ namespace RealtimePlayGround
 
                 if (_realtimeSession != null)
                 {
-                    var contentItem = new RealtimeContentItem(
+                    var contentItem = new RealtimeConversationItem(
                         [new DataContent($"data:{mimeType};base64,{base64Image}")],
                         id: null,
                         role: ChatRole.User
                     );
                     var ct = _streamingCancellationTokenSource?.Token ?? default;
-                    await _realtimeSession.SendAsync(new RealtimeClientCreateConversationItemMessage(item: contentItem), ct);
-                    await _realtimeSession.SendAsync(new RealtimeClientCreateResponseMessage(), ct);
+                    await _realtimeSession.SendAsync(new CreateConversationItemRealtimeClientMessage(item: contentItem), ct);
+                    await _realtimeSession.SendAsync(new CreateResponseRealtimeClientMessage(), ct);
                 }
 
                 using var ms = new MemoryStream(imageBytes);
